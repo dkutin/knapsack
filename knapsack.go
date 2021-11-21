@@ -8,6 +8,8 @@ import (
 	"io"
 	"strings"
 	"strconv"
+	"time"
+	"sort"
 )
 
 type Item struct {
@@ -99,6 +101,30 @@ func BacktrackDynamic(items []Item, maxWeight int, solution [][]int, indexWeight
 	return config
 }
 
+type CoefSorter []Item
+func (a CoefSorter) Len() int { return len(a) }
+func (a CoefSorter) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a CoefSorter) Less(i ,j int) bool { return float32(a[i].Value) / float32(a[i].Weight) > float32(a[j].Value) / float32(a[j].Weight) }
+
+func KnapsackHeuristic(items []Item, maxWeight int, sorter sort.Interface) ([]int, int) {
+	sort.Sort(sorter)
+
+	var sumWeight int = 0
+	var sumValue int = 0
+	var bestConfig []int
+
+	for i := 0; i < len(items); i++ {
+		currentWeight := items[i].Weight
+		if (sumWeight + currentWeight < maxWeight) {
+			bestConfig = append(bestConfig, i)
+			sumWeight += items[i].Weight
+			sumValue += items[i].Value
+		}
+	}
+
+	return bestConfig, sumValue
+}
+
 func Readln(r *bufio.Reader) (string, error) {
 	var (isPrefix bool = true
 		err error = nil
@@ -113,13 +139,16 @@ func Readln(r *bufio.Reader) (string, error) {
 }
 
 func main() {
-	fmt.Println("Lets get started...")
+	/** CONFIGURATION */
+	var maxWeight int = 99457
+	var file string = "data/hard2"
+	/** END CONFIGURATION */
 
-	// Define where we are to be putting all of our items.
-	var items []Item
+	var start time.Time
+	var elapsed time.Duration
 
 	// Open the file.
-	f, err := os.Open("data/simple")
+	f, err := os.Open(file)
 
 	if (err != nil) {
 		fmt.Println(err)
@@ -129,6 +158,9 @@ func main() {
 	s, e := Readln(r)
 
 	fmt.Println(s)
+
+	// Define where we are to be putting all of our items.
+	var items []Item
 
 	for e == nil {
 		s, e := Readln(r)
@@ -144,34 +176,67 @@ func main() {
 		items = append(items, Item{Value:int(v), Weight:int(w)})
 	}
 
-	var maxWeight int = 22
-
 	fmt.Println("----------------")
 	fmt.Println("--- Dynamic ----")
 	fmt.Println("----------------")
 
 	fmt.Println("Items in the set: ",  len(items))
-	fmt.Println("Max Weight", maxWeight)
+	fmt.Println("Max Weight:", maxWeight)
 
-	config, solution  := KnapsackDynamic(items, maxWeight)
+	start = time.Now()
+	_, solution  := KnapsackDynamic(items, maxWeight)
+	elapsed = time.Since(start)
 	fmt.Println("----------------")
-	fmt.Println("Items to take: ")
-	fmt.Printf("%v\n", config)
+	fmt.Printf("Dynamic took %s\n", elapsed)
+	// fmt.Println("Items to take: ")
+	// fmt.Printf("%v\n", config)
 
 	fmt.Println("Max Value: ", solution)
 
+	// fmt.Println("----------------")
+	// fmt.Println("---- FPTAS -----")
+	// fmt.Println("----------------")
+
+
+	// fmt.Println("Items in the set: ",  len(items))
+	// fmt.Println("Max Weight: ", maxWeight)
+
+	// start = time.Now()
+	// _, solution = KnapsackFPTAS(items, maxWeight, 0.2)
+	// elapsed = time.Since(start)
+	// fmt.Println("----------------")
+	// fmt.Printf("FPTAS (0.2) took %s\n", elapsed)
+	// fmt.Println("Max Value: ", solution)
+
+	// start = time.Now()
+	// _, solution = KnapsackFPTAS(items, maxWeight, 0.4)
+	// elapsed = time.Since(start)
+	// fmt.Println("----------------")
+	// fmt.Printf("FPTAS (0.4) took %s\n", elapsed)
+	// fmt.Println("Max Value: ", solution)
+
+	// start = time.Now()
+	// _, solution = KnapsackFPTAS(items, maxWeight, 0.6)
+	// elapsed = time.Since(start)
+	// fmt.Println("----------------")
+	// fmt.Printf("FPTAS (0.6) took %s\n", elapsed)
+	// fmt.Println("Max Value: ", solution)
+
+	// start = time.Now()
+	// _, solution = KnapsackFPTAS(items, maxWeight, 0.8)
+	// elapsed = time.Since(start)
+	// fmt.Println("----------------")
+	// fmt.Printf("FPTAS (0.8) took %s\n", elapsed)
+	// fmt.Println("Max Value: ", solution)
+
 	fmt.Println("----------------")
-	fmt.Println("---- FPTAS -----")
+	fmt.Println("--- Heuristic --")
 	fmt.Println("----------------")
 
-
-	fmt.Println("Items in the set: ",  len(items))
-	fmt.Println("Max Weight: ", maxWeight)
-
-	config, solution = KnapsackFPTAS(items, maxWeight, 0.8)
+	start = time.Now()
+	_, solution = KnapsackHeuristic(items, maxWeight, CoefSorter(items))
+	elapsed = time.Since(start)
 	fmt.Println("----------------")
-	fmt.Println("Items to take: ")
-	fmt.Printf("%v\n", config)
-
+	fmt.Printf("Heuristic search took %s\n", elapsed)
 	fmt.Println("Max Value: ", solution)
 }
