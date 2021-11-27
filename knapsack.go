@@ -12,6 +12,9 @@ import (
 	"sort"
 )
 
+/**
+ * Define the structure of each item.
+ */
 type Item struct {
 	Value int
 	Weight int
@@ -101,11 +104,17 @@ func BacktrackDynamic(items []Item, maxWeight int, solution [][]int, indexWeight
 	return config
 }
 
+/**
+ * Coefficeient sorter based on V/W of each item.
+ */
 type CoefSorter []Item
 func (a CoefSorter) Len() int { return len(a) }
 func (a CoefSorter) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a CoefSorter) Less(i ,j int) bool { return float32(a[i].Value) / float32(a[i].Weight) > float32(a[j].Value) / float32(a[j].Weight) }
 
+/**
+ * Heuristic sorter
+ */
 func KnapsackHeuristic(items []Item, maxWeight int, sorter sort.Interface) ([]int, int) {
 	sort.Sort(sorter)
 
@@ -125,6 +134,9 @@ func KnapsackHeuristic(items []Item, maxWeight int, sorter sort.Interface) ([]in
 	return bestConfig, sumValue
 }
 
+/**
+ * Read each line from the file.
+ */
 func Readln(r *bufio.Reader) (string, error) {
 	var (isPrefix bool = true
 		err error = nil
@@ -138,15 +150,74 @@ func Readln(r *bufio.Reader) (string, error) {
 	return string(ln), err
 }
 
+/**
+ * Calculate the relative error of the prediction.
+ */
+func calculateError(maxValue int, targetValue int) (float32) {
+	return (float32(targetValue) - float32(maxValue)) / float32(targetValue)
+}
+
+/**
+ * Main.
+ */
 func main() {
-	/** CONFIGURATION */
-	var maxWeight int = 99457
-	var file string = "data/hard2"
-	/** END CONFIGURATION */
+	file := os.Args[1]
 
-	var start time.Time
-	var elapsed time.Duration
+	fmt.Println("----------------")
+	fmt.Println("---- FPTAS -----")
+	fmt.Println("----------------")
 
+	evalFPTAS(file, 0.2)
+
+	evalFPTAS(file, 0.4)
+
+	evalFPTAS(file, 0.6)
+
+	evalFPTAS(file, 0.8)
+
+	evalFPTAS(file, 1.0)
+
+	fmt.Println("----------------")
+	fmt.Println("--- Heuristic --")
+	fmt.Println("----------------")
+
+	evalHeuristic(file)
+}
+
+/**
+ * Evalulate the FPTAS algorithm.
+ */
+func evalFPTAS(file string, accuracy float32) {
+	items, maxWeight, maxValue := formatItems(file)
+
+	start := time.Now()
+	_, solution := KnapsackFPTAS(items, maxWeight, accuracy)
+	elapsed := time.Since(start)
+	fmt.Println("----------------")
+	fmt.Printf("FPTAS (%f) took %s\n", accuracy, elapsed)
+	fmt.Println("Max Value: ", solution)
+	fmt.Println("Difference: ", calculateError(solution, maxValue))
+	fmt.Println("----------------")
+}
+
+/**
+ * Evalulate the Hueristic Algorithm.
+ */
+func evalHeuristic(file string) {
+	items, maxWeight, maxValue := formatItems(file)
+
+	start := time.Now()
+	_, solution := KnapsackHeuristic(items, maxWeight, CoefSorter(items))
+	elapsed := time.Since(start)
+	fmt.Printf("Heuristic Search took %s\n", elapsed)
+	fmt.Println("Value Achieved: ", solution)
+	fmt.Println("Difference: ", calculateError(solution, maxValue))
+}
+
+/**
+ * Format items from the file, to the working set.
+ */
+func formatItems (file string) ([]Item, int, int) {
 	// Open the file.
 	f, err := os.Open(file)
 
@@ -157,7 +228,17 @@ func main() {
 	r := bufio.NewReader(f)
 	s, e := Readln(r)
 
+	// Read the first line
 	fmt.Println(s)
+
+	values := strings.Fields(s)
+
+	// Parse the top of the file to get the max value and the target value.
+	mw, e  := strconv.ParseInt(values[1], 0, 64)
+	mv, e := strconv.ParseInt(values[3], 0, 64)
+
+	maxWeight := int(mw)
+	maxValue := int(mv)
 
 	// Define where we are to be putting all of our items.
 	var items []Item
@@ -176,67 +257,5 @@ func main() {
 		items = append(items, Item{Value:int(v), Weight:int(w)})
 	}
 
-	fmt.Println("----------------")
-	fmt.Println("--- Dynamic ----")
-	fmt.Println("----------------")
-
-	fmt.Println("Items in the set: ",  len(items))
-	fmt.Println("Max Weight:", maxWeight)
-
-	start = time.Now()
-	_, solution  := KnapsackDynamic(items, maxWeight)
-	elapsed = time.Since(start)
-	fmt.Println("----------------")
-	fmt.Printf("Dynamic took %s\n", elapsed)
-	// fmt.Println("Items to take: ")
-	// fmt.Printf("%v\n", config)
-
-	fmt.Println("Max Value: ", solution)
-
-	// fmt.Println("----------------")
-	// fmt.Println("---- FPTAS -----")
-	// fmt.Println("----------------")
-
-
-	// fmt.Println("Items in the set: ",  len(items))
-	// fmt.Println("Max Weight: ", maxWeight)
-
-	// start = time.Now()
-	// _, solution = KnapsackFPTAS(items, maxWeight, 0.2)
-	// elapsed = time.Since(start)
-	// fmt.Println("----------------")
-	// fmt.Printf("FPTAS (0.2) took %s\n", elapsed)
-	// fmt.Println("Max Value: ", solution)
-
-	// start = time.Now()
-	// _, solution = KnapsackFPTAS(items, maxWeight, 0.4)
-	// elapsed = time.Since(start)
-	// fmt.Println("----------------")
-	// fmt.Printf("FPTAS (0.4) took %s\n", elapsed)
-	// fmt.Println("Max Value: ", solution)
-
-	// start = time.Now()
-	// _, solution = KnapsackFPTAS(items, maxWeight, 0.6)
-	// elapsed = time.Since(start)
-	// fmt.Println("----------------")
-	// fmt.Printf("FPTAS (0.6) took %s\n", elapsed)
-	// fmt.Println("Max Value: ", solution)
-
-	// start = time.Now()
-	// _, solution = KnapsackFPTAS(items, maxWeight, 0.8)
-	// elapsed = time.Since(start)
-	// fmt.Println("----------------")
-	// fmt.Printf("FPTAS (0.8) took %s\n", elapsed)
-	// fmt.Println("Max Value: ", solution)
-
-	fmt.Println("----------------")
-	fmt.Println("--- Heuristic --")
-	fmt.Println("----------------")
-
-	start = time.Now()
-	_, solution = KnapsackHeuristic(items, maxWeight, CoefSorter(items))
-	elapsed = time.Since(start)
-	fmt.Println("----------------")
-	fmt.Printf("Heuristic search took %s\n", elapsed)
-	fmt.Println("Max Value: ", solution)
+	return items, maxWeight, maxValue
 }
